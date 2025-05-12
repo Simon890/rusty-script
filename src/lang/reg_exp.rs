@@ -7,6 +7,17 @@ pub enum TokenRegEx {
     SimpleQuote,
     DoubleQuote,
     SemiColon,
+    LeftParen,
+    RightParen,
+    EqOp,
+    AddOp,
+    SubOp,
+    DivOp,
+    MulOp,
+    PowOp,
+    NegationOp,
+    GtOp,
+    LtOp,
 }
 
 impl TokenRegEx {
@@ -17,7 +28,18 @@ impl TokenRegEx {
             TokenRegEx::Number => Regex::new(r"[0-9]").unwrap().is_match(value),
             TokenRegEx::SimpleQuote => Regex::new(r"[']").unwrap().is_match(value),
             TokenRegEx::DoubleQuote => Regex::new(r#"["]"#).unwrap().is_match(value),
-            TokenRegEx::SemiColon => Regex::new(r"[;]").unwrap().is_match(value)
+            TokenRegEx::SemiColon => Regex::new(r"[;]").unwrap().is_match(value),
+            TokenRegEx::LeftParen => Regex::new(r"[(]").unwrap().is_match(value),
+            TokenRegEx::RightParen => Regex::new(r"[)]").unwrap().is_match(value),
+            TokenRegEx::EqOp => Regex::new(r"[\=]").unwrap().is_match(value),
+            TokenRegEx::AddOp => Regex::new(r"[\+]").unwrap().is_match(value),
+            TokenRegEx::SubOp => Regex::new(r"[\-]").unwrap().is_match(value),
+            TokenRegEx::DivOp => Regex::new(r"[\/]").unwrap().is_match(value),
+            TokenRegEx::MulOp => Regex::new(r"[\*]").unwrap().is_match(value),
+            TokenRegEx::PowOp => Regex::new(r"[\^]").unwrap().is_match(value),
+            TokenRegEx::GtOp => Regex::new(r"[>]").unwrap().is_match(value),
+            TokenRegEx::LtOp => Regex::new(r"[<]").unwrap().is_match(value),
+            TokenRegEx::NegationOp => Regex::new(r"[\!]").unwrap().is_match(value)
         }
     }
 }

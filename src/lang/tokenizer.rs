@@ -1,6 +1,4 @@
-use regex::Regex;
-
-use super::{panics::unexpected_eof, reg_exp::TokenRegEx};
+use super::{panics::unexpected_eof, panics::unexpected_token, reg_exp::TokenRegEx};
 
 pub struct Tokenizer<'a> {
     pos: u32,
@@ -46,7 +44,80 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
-            panic!("Unexpected token {} at position {}", current, self.pos);
+            if self.is_left_paren(&current) {
+                self.advance();
+                self.tokens.push(Token::LeftParen);
+                continue;
+            }
+
+            if self.is_right_paren(&current) {
+                self.advance();
+                self.tokens.push(Token::RightParen);
+                continue;
+            }
+
+            //Operators
+
+            if self.is_eq_op(&current) {
+                self.advance();
+                self.tokens.push(Token::EqOp);
+                continue;
+            }
+
+            if self.is_negation_op(&current) {
+                self.advance();
+                if self.is_eq_op(&self.current()) {
+                    self.advance();
+                    self.tokens.push(Token::NotEqOp);
+                    continue;
+                }
+                self.tokens.push(Token::NegationOp);
+                continue;
+            }
+
+            if self.is_add_op(&current) {
+                self.advance();
+                self.tokens.push(Token::AddOp);
+                continue;
+            }
+
+            if self.is_sub_op(&current) {
+                self.advance();
+                self.tokens.push(Token::SubOp);
+                continue;
+            }
+
+            if self.is_mul_op(&current) {
+                self.advance();
+                self.tokens.push(Token::MulOp);
+                continue;
+            }
+
+            if self.is_div_op(&current) {
+                self.advance();
+                self.tokens.push(Token::DivOp);
+                continue;
+            }
+
+            if self.is_pow_op(&current) {
+                self.advance();
+                self.tokens.push(Token::PowOp);
+                continue;
+            }
+
+            if self.is_gt_op(&current) {
+                self.advance();
+                self.tokens.push(Token::GtOp);
+                continue;
+            }
+
+            if self.is_lt_op(&current) {
+                self.advance();
+                self.tokens.push(Token::LtOp);
+                continue;
+            }
+
+            unexpected_token(&current, &self.pos);
         }
         &self.tokens
     }
@@ -128,6 +199,50 @@ impl<'a> Tokenizer<'a> {
         TokenRegEx::SemiColon.test(value)
     }
 
+    fn is_left_paren(&self, value: &str) -> bool {
+        TokenRegEx::LeftParen.test(value)
+    }
+    
+    fn is_right_paren(&self, value: &str) -> bool {
+        TokenRegEx::RightParen.test(value)
+    }
+
+    fn is_eq_op(&self, value: &str) -> bool {
+        TokenRegEx::EqOp.test(value)
+    }
+
+    fn is_add_op(&self, value: &str) -> bool {
+        TokenRegEx::AddOp.test(value)
+    }
+
+    fn is_sub_op(&self, value: &str) -> bool {
+        TokenRegEx::SubOp.test(value)
+    }
+    
+    fn is_mul_op(&self, value: &str) -> bool {
+        TokenRegEx::MulOp.test(value)
+    }
+    
+    fn is_div_op(&self, value: &str) -> bool {
+        TokenRegEx::DivOp.test(value)
+    }
+    
+    fn is_pow_op(&self, value: &str) -> bool {
+        TokenRegEx::PowOp.test(value)
+    }
+
+    fn is_gt_op(&self, value: &str) -> bool {
+        TokenRegEx::GtOp.test(value)
+    }
+
+    fn is_lt_op(&self, value: &str) -> bool {
+        TokenRegEx::LtOp.test(value)
+    }
+
+    fn is_negation_op(&self, value: &str) -> bool {
+        TokenRegEx::NegationOp.test(value)
+    }
+
 }
 
 #[derive(Debug)]
@@ -146,7 +261,15 @@ pub enum Token {
     },
     LeftParen,
     RightParen,
-    SimpleQuote,
-    DoubleQuote,
     SemiColon,
+    EqOp,
+    NotEqOp,
+    SubOp,
+    AddOp,
+    MulOp,
+    DivOp,
+    PowOp,
+    GtOp,
+    LtOp,
+    NegationOp
 }
