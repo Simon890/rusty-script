@@ -56,6 +56,30 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
+            if self.is_left_sq_brace(&current) {
+                self.advance();
+                self.tokens.push(Token::LeftSqBrace);
+                continue;
+            }
+
+            if self.is_right_sq_brace(&current) {
+                self.advance();
+                self.tokens.push(Token::RightSqBrace);
+                continue;
+            }
+
+            if self.is_left_curly_brace(&current) {
+                self.advance();
+                self.tokens.push(Token::LeftCurlyBrace);
+                continue;
+            }
+
+            if self.is_right_curly_brace(&current) {
+                self.advance();
+                self.tokens.push(Token::RightCurlyBrace);
+                continue;
+            }
+
             //Operators
 
             if self.is_eq_op(&current) {
@@ -243,6 +267,22 @@ impl<'a> Tokenizer<'a> {
         TokenRegEx::NegationOp.test(value)
     }
 
+    fn is_left_sq_brace(&self, value: &str) -> bool {
+        TokenRegEx::LeftSqBrace.test(value)
+    }
+
+    fn is_right_sq_brace(&self, value: &str) -> bool {
+        TokenRegEx::RightSqBrace.test(value)
+    }
+
+    fn is_left_curly_brace(&self, value: &str) -> bool {
+        TokenRegEx::LeftCurlyBrace.test(value)
+    }
+
+    fn is_right_curly_brace(&self, value: &str) -> bool {
+        TokenRegEx::RightCurlyBrace.test(value)
+    }
+
 }
 
 #[derive(Debug)]
@@ -271,5 +311,9 @@ pub enum Token {
     PowOp,
     GtOp,
     LtOp,
-    NegationOp
+    NegationOp,
+    LeftSqBrace,
+    RightSqBrace,
+    LeftCurlyBrace,
+    RightCurlyBrace
 }

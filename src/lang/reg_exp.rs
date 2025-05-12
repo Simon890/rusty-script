@@ -18,6 +18,10 @@ pub enum TokenRegEx {
     NegationOp,
     GtOp,
     LtOp,
+    LeftSqBrace,
+    RightSqBrace,
+    LeftCurlyBrace,
+    RightCurlyBrace,
 }
 
 impl TokenRegEx {
@@ -39,7 +43,11 @@ impl TokenRegEx {
             TokenRegEx::PowOp => Regex::new(r"[\^]").unwrap().is_match(value),
             TokenRegEx::GtOp => Regex::new(r"[>]").unwrap().is_match(value),
             TokenRegEx::LtOp => Regex::new(r"[<]").unwrap().is_match(value),
-            TokenRegEx::NegationOp => Regex::new(r"[\!]").unwrap().is_match(value)
+            TokenRegEx::NegationOp => Regex::new(r"[\!]").unwrap().is_match(value),
+            TokenRegEx::LeftSqBrace => Regex::new(r"[\[]").unwrap().is_match(value),
+            TokenRegEx::RightSqBrace => Regex::new(r"[\]]").unwrap().is_match(value),
+            TokenRegEx::LeftCurlyBrace => Regex::new(r"[\{]").unwrap().is_match(value),
+            TokenRegEx::RightCurlyBrace => Regex::new(r"[\}]").unwrap().is_match(value),
         }
     }
 }
