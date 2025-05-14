@@ -70,7 +70,10 @@ impl Parser {
             },
             Token::Identifier { .. } => {
                 self.parse_function()
-            }
+            },
+            Token::SubOp | Token::AddOp => {
+                self.parse_unary_expression()
+            },
             token => panic!("TODO! {:#?}", token)
         }
     }
@@ -96,6 +99,16 @@ impl Parser {
         args
     }
 
+    fn parse_pow_expression(&mut self) -> ASTNode {
+        let mut left = self.parse_expression();
+        while !self.is_eof() && self.current().kind() == TokenKind::PowOp {
+            self.advance(Some(TokenKind::PowOp));
+            let right = self.parse_expression();
+            left = ASTNode::BinaryExpression { left: Box::new(left), right: Box::new(right), operator: '^' }
+        }
+        left
+    }
+
     fn parse_sum_expression(&mut self) -> ASTNode {
         let mut left = self.parse_mul_expression();
         while !self.is_eof() && (self.current().kind() == TokenKind::AddOp || self.current().kind() == TokenKind::SubOp) {
@@ -116,13 +129,24 @@ impl Parser {
     }
 
     fn parse_mul_expression(&mut self) -> ASTNode {
-        let mut left = self.parse_expression();
+        let mut left = self.parse_pow_expression();
         while !self.is_eof() && self.current().kind() == TokenKind::MulOp {
             self.advance(Some(TokenKind::MulOp));
-            let right = self.parse_expression();
+            let right = self.parse_pow_expression();
             left = ASTNode::BinaryExpression { left: Box::new(left), right: Box::new(right), operator: '*' }
         }
         left
+    }
+
+    fn parse_unary_expression(&mut self) -> ASTNode {
+        let token_sign = self.advance(None);
+        let sign = match token_sign {
+            Token::SubOp => '-',
+            Token::AddOp => '+',
+            _ => unreachable!("Unexpected sign")
+        };
+        let expression = self.parse_expression();
+        ASTNode::UnaryExpression { sign, expr: Box::new(expression) }
     }
 }
 
@@ -139,5 +163,9 @@ pub enum ASTNode {
         left: Box<ASTNode>,
         right: Box<ASTNode>,
         operator: char,
+    },
+    UnaryExpression {
+        sign: char,
+        expr: Box<ASTNode>
     }
 }
