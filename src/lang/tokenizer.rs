@@ -1,4 +1,4 @@
-use super::{panics::unexpected_eof, panics::unexpected_token, reg_exp::TokenRegEx};
+use super::{panics::{casting_error, unexpected_eof, unexpected_token}, reg_exp::TokenRegEx};
 
 pub struct Tokenizer<'a> {
     pos: u32,
@@ -11,7 +11,7 @@ impl<'a> Tokenizer<'a> {
         Tokenizer { pos: 0, text, tokens: vec![] }
     }
 
-    pub fn tokenize(&mut self) -> &Vec<Token> {
+    pub fn tokenize(&mut self) -> Vec<Token> {
         while !self.is_eof() {
             self.skip_empty_space();
             let current = self.current();
@@ -141,9 +141,16 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
+            if self.is_comma(&current) {
+                self.advance();
+                self.tokens.push(Token::Comma);
+                continue;
+            }
+
             unexpected_token(&current, &self.pos);
         }
-        &self.tokens
+        self.tokens.push(Token::EOF);
+        self.tokens.clone()
     }
     
     fn skip_empty_space(&mut self) {
@@ -283,9 +290,13 @@ impl<'a> Tokenizer<'a> {
         TokenRegEx::RightCurlyBrace.test(value)
     }
 
+    fn is_comma(&self, value: &str) -> bool {
+        TokenRegEx::Comma.test(value)
+    }
+
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Token {
     Identifier {
         value: String
@@ -315,5 +326,85 @@ pub enum Token {
     LeftSqBrace,
     RightSqBrace,
     LeftCurlyBrace,
-    RightCurlyBrace
+    RightCurlyBrace,
+    Comma,
+    EOF
+}
+
+impl Token {
+    pub fn kind(&self) -> TokenKind {
+        match self {
+            Self::Identifier {..} => TokenKind::Identifier,
+            Self::NumberLiteral { .. } => TokenKind::NumberLiteral,
+            Self::BoolLiteral { .. } => TokenKind::BoolLiteral,
+            Self::StringLiteral { .. } => TokenKind::StringLiteral,
+            Self::LeftParen => TokenKind::LeftParen,
+            Self::RightParen => TokenKind::RightParen,
+            Self::SemiColon => TokenKind::SemiColon,
+            Self::EqOp => TokenKind::EqOp,
+            Self::NotEqOp => TokenKind::NotEqOp,
+            Self::SubOp => TokenKind::SubOp,
+            Self::AddOp => TokenKind::AddOp,
+            Self::MulOp => TokenKind::MulOp,
+            Self::DivOp => TokenKind::DivOp,
+            Self::PowOp => TokenKind::PowOp,
+            Self::GtOp => TokenKind::GtOp,
+            Self::LtOp => TokenKind::LtOp,
+            Self::NegationOp => TokenKind::NegationOp,
+            Self::LeftSqBrace => TokenKind::LeftSqBrace,
+            Self::RightSqBrace => TokenKind::RightSqBrace,
+            Self::LeftCurlyBrace => TokenKind::LeftCurlyBrace,
+            Self::RightCurlyBrace => TokenKind::RightCurlyBrace,
+            Self::Comma => TokenKind::Comma,
+            Self::EOF => TokenKind::EOF,
+        }
+    }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            Self::Identifier { value } | Self::StringLiteral { value } => value.to_owned(),
+            _ => casting_error("String")
+        }
+    }
+
+    pub fn as_i32(&self) -> i32 {
+        match self {
+            Self::NumberLiteral { value } => *value,
+            _ => casting_error("i32")
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match &self {
+            Self::BoolLiteral { value } => *value,
+            _ => casting_error("bool")
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TokenKind {
+    Identifier,
+    NumberLiteral,
+    BoolLiteral,
+    StringLiteral,
+    LeftParen,
+    RightParen,
+    SemiColon,
+    EqOp,
+    NotEqOp,
+    SubOp,
+    AddOp,
+    MulOp,
+    DivOp,
+    PowOp,
+    GtOp,
+    LtOp,
+    NegationOp,
+    LeftSqBrace,
+    RightSqBrace,
+    LeftCurlyBrace,
+    RightCurlyBrace,
+    Comma,
+    EOF
 }

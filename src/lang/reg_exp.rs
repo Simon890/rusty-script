@@ -1,5 +1,11 @@
 use regex::Regex;
 
+macro_rules! check_regex {
+    ($pattern: expr, $value: expr) => {{
+        Regex::new($pattern).unwrap().is_match($value)
+    }};
+}
+
 pub enum TokenRegEx {
     EmptySpace,
     Char,
@@ -22,32 +28,34 @@ pub enum TokenRegEx {
     RightSqBrace,
     LeftCurlyBrace,
     RightCurlyBrace,
+    Comma,
 }
 
 impl TokenRegEx {
     pub fn test(&self, value: &str) -> bool {
         match self {
-            TokenRegEx::EmptySpace => Regex::new(r"[\s\t\n\r]").unwrap().is_match(value),
-            TokenRegEx::Char => Regex::new(r"[a-zA-Z]").unwrap().is_match(value),
-            TokenRegEx::Number => Regex::new(r"[0-9]").unwrap().is_match(value),
-            TokenRegEx::SimpleQuote => Regex::new(r"[']").unwrap().is_match(value),
-            TokenRegEx::DoubleQuote => Regex::new(r#"["]"#).unwrap().is_match(value),
-            TokenRegEx::SemiColon => Regex::new(r"[;]").unwrap().is_match(value),
-            TokenRegEx::LeftParen => Regex::new(r"[(]").unwrap().is_match(value),
-            TokenRegEx::RightParen => Regex::new(r"[)]").unwrap().is_match(value),
-            TokenRegEx::EqOp => Regex::new(r"[\=]").unwrap().is_match(value),
-            TokenRegEx::AddOp => Regex::new(r"[\+]").unwrap().is_match(value),
-            TokenRegEx::SubOp => Regex::new(r"[\-]").unwrap().is_match(value),
-            TokenRegEx::DivOp => Regex::new(r"[\/]").unwrap().is_match(value),
-            TokenRegEx::MulOp => Regex::new(r"[\*]").unwrap().is_match(value),
-            TokenRegEx::PowOp => Regex::new(r"[\^]").unwrap().is_match(value),
-            TokenRegEx::GtOp => Regex::new(r"[>]").unwrap().is_match(value),
-            TokenRegEx::LtOp => Regex::new(r"[<]").unwrap().is_match(value),
-            TokenRegEx::NegationOp => Regex::new(r"[\!]").unwrap().is_match(value),
-            TokenRegEx::LeftSqBrace => Regex::new(r"[\[]").unwrap().is_match(value),
-            TokenRegEx::RightSqBrace => Regex::new(r"[\]]").unwrap().is_match(value),
-            TokenRegEx::LeftCurlyBrace => Regex::new(r"[\{]").unwrap().is_match(value),
-            TokenRegEx::RightCurlyBrace => Regex::new(r"[\}]").unwrap().is_match(value),
+            TokenRegEx::EmptySpace => check_regex!(r"[\s\t\n\r]", value),
+            TokenRegEx::Char => check_regex!(r"[a-zA-Z]", value),
+            TokenRegEx::Number => check_regex!(r"[0-9]", value),
+            TokenRegEx::SimpleQuote => check_regex!(r"[']", value),
+            TokenRegEx::DoubleQuote => check_regex!(r#"["]"#, value),
+            TokenRegEx::SemiColon => check_regex!(r"[;]", value),
+            TokenRegEx::LeftParen => check_regex!(r"[(]", value),
+            TokenRegEx::RightParen => check_regex!(r"[)]", value),
+            TokenRegEx::EqOp => check_regex!(r"[\=]", value),
+            TokenRegEx::AddOp => check_regex!(r"[\+]", value),
+            TokenRegEx::SubOp => check_regex!(r"[\-]", value),
+            TokenRegEx::DivOp => check_regex!(r"[\/]", value),
+            TokenRegEx::MulOp => check_regex!(r"[\*]", value),
+            TokenRegEx::PowOp => check_regex!(r"[\^]", value),
+            TokenRegEx::GtOp => check_regex!(r"[>]", value),
+            TokenRegEx::LtOp => check_regex!(r"[<]", value),
+            TokenRegEx::NegationOp => check_regex!(r"[\!]", value),
+            TokenRegEx::LeftSqBrace => check_regex!(r"[\[]", value),
+            TokenRegEx::RightSqBrace => check_regex!(r"[\]]", value),
+            TokenRegEx::LeftCurlyBrace => check_regex!(r"[\{]", value),
+            TokenRegEx::RightCurlyBrace => check_regex!(r"[\}]", value),
+            TokenRegEx::Comma => check_regex!(r"[\,]", value),
         }
     }
 }

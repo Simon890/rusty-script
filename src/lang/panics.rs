@@ -5,3 +5,7 @@ pub fn unexpected_eof(pos: &u32) -> ! {
 pub fn unexpected_token(token: &str, pos: &u32) -> ! {
     panic!("Unexpected token '{}' at position {}", token, pos);
 }
+
+pub fn casting_error(datatype: &str) -> ! {
+    panic!("Cannot parse to {}", datatype);
+}
