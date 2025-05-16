@@ -150,9 +150,9 @@ impl Parser {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ASTNode {
-    Number(i32),
+    Number(f32),
     Bool(bool),
     String(String),
     FunctionCall {

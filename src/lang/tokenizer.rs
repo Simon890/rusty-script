@@ -183,13 +183,13 @@ impl<'a> Tokenizer<'a> {
         value
     }
 
-    fn number(&mut self) -> i32 {
+    fn number(&mut self) -> f32 {
         let mut value = String::new();
         while !self.is_eof() && self.is_number(&self.current()) {
             value.push_str(&self.current());
             self.advance();
         }
-        value.parse::<i32>().unwrap()
+        value.parse::<f32>().unwrap()
     }
 
     fn string(&mut self, quote_type: &str) -> String {
@@ -302,7 +302,7 @@ pub enum Token {
         value: String
     },
     NumberLiteral {
-        value: i32
+        value: f32
     },
     BoolLiteral {
         value: bool
@@ -367,10 +367,10 @@ impl Token {
         }
     }
 
-    pub fn as_i32(&self) -> i32 {
+    pub fn as_f32(&self) -> f32 {
         match self {
             Self::NumberLiteral { value } => *value,
-            _ => casting_error("i32")
+            _ => casting_error("f32")
         }
     }
 
