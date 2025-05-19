@@ -1,6 +1,8 @@
-use std::{any::TypeId, collections::HashMap};
+use std::{collections::HashMap};
 
 use crate::lang::interpreter::RuntimeValue;
+
+use super::native_functions::load_native_functions;
 
 pub struct FunctionRegistry {
     functions: HashMap<String, Function>
@@ -8,9 +10,11 @@ pub struct FunctionRegistry {
 
 impl FunctionRegistry {
     pub fn new() -> Self {
-        Self {
+        let mut instance = Self {
             functions: HashMap::new()
-        }
+        };
+        load_native_functions(&mut instance);
+        instance
     }
 
     pub fn add_function(&mut self, function: Function) {
@@ -33,32 +37,42 @@ impl FunctionRegistry {
 }
 
 #[derive(Debug)]
-enum RuntimeType {
+pub enum RuntimeType {
     Number,
     String,
     Bool,
+    Any,
+    Null,
 }
 
 impl RuntimeValue {
     fn matches_type(&self, runtime_type: &RuntimeType) -> bool {
-        match (self, runtime_type) {
-            (RuntimeValue::Number(..), RuntimeType::Number) => true,
-            (RuntimeValue::Bool(..), RuntimeType::Bool) => true,
-            (RuntimeValue::String(..), RuntimeType::String) => true,
+        match (self.to_type(), runtime_type) {
+            (RuntimeType::Number, RuntimeType::Number) => true,
+            (RuntimeType::Bool, RuntimeType::Bool) => true,
+            (RuntimeType::String, RuntimeType::String) => true,
+            (RuntimeType::Null, RuntimeType::Null) => true,
+            (_, RuntimeType::Any) => true,
             _ => false
         }
     }
 }
 
-struct Function {
+pub struct Function {
     name: String,
     expected_params: usize,
     param_types: Vec<RuntimeType>,
     implementation: Box<dyn Fn(Arguments) -> RuntimeValue>
 }
 
+impl Function {
+    pub fn new(name: String, expected_params: usize, param_types: Vec<RuntimeType>, implementation: Box<dyn Fn(Arguments) -> RuntimeValue>) -> Self {
+        Self { name, expected_params, param_types, implementation }
+    }
+}
 
-struct Arguments {
+
+pub struct Arguments {
     args: Vec<RuntimeValue>,
     index: usize
 }
@@ -82,6 +96,10 @@ impl Arguments {
         extractor(&runtime_value).unwrap_or_else(|| {
             panic!("Expected argument at position {} to be a {} but got something else", index, expected);
         })
+    }
+
+    pub fn has(&self, index: usize) -> bool {
+        index < self.args.len()
     }
 
     pub fn as_str(&self, index: usize) -> &String {
@@ -108,6 +126,14 @@ impl Arguments {
                 _ => None
             }
         }, "Number")
+    }
+
+    pub fn as_any(&self, index: usize) -> &RuntimeValue {
+        self.get::<RuntimeValue>(index, |rv| {
+            match rv {
+                value => Some(value)
+            }
+        }, "Any")
     }
 }
 
@@ -145,5 +171,11 @@ mod test {
 
         let result2 = registry.call("concat", vec![RuntimeValue::String("hello ".to_owned()), RuntimeValue::String("world".to_owned())]);
         assert_eq!(result2, RuntimeValue::String("hello world".to_owned()));
+
+        let result3 = registry.call("print", vec![RuntimeValue::Number(34.)]);
+        assert_eq!(result3, RuntimeValue::Null);
+
+        let result3 = registry.call("read", vec![]);
+        assert_eq!(result3, RuntimeValue::String("hi!".to_string()));
     }
 }

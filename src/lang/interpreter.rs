@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul, Sub};
 
-use super::parser::{ASTNode, Parser};
+use super::{func::function_registry::RuntimeType, parser::{ASTNode, Parser}};
 
 pub struct Interpreter {
     ast: Vec<ASTNode>,
@@ -133,6 +133,17 @@ impl RuntimeValue {
                 Self::Number(left_value.powf(*right_value))
             }
             _ => panic!("Cannot rise {:?} to the power of {:?}", self, rhs)
+        }
+    }
+}
+
+impl RuntimeValue {
+    pub fn to_type(&self) -> RuntimeType {
+        match self {
+            Self::Bool(..) => RuntimeType::Bool,
+            Self::Number(..) => RuntimeType::Number,
+            Self::String(..) => RuntimeType::String,
+            Self::Null => RuntimeType::Null,
         }
     }
 }
