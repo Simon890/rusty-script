@@ -4,3 +4,4 @@ mod panics;
 pub mod parser;
 pub mod interpreter;
 pub mod func;
+pub mod env;
