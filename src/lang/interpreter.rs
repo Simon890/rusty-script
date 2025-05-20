@@ -1,16 +1,18 @@
 use std::{ops::{Add, Div, Mul, Sub}, rc::Rc};
 
-use super::{env::Env, func::function_registry::RuntimeType, parser::{ASTNode, Parser}};
+use super::{env::Env, func::function_registry::{FunctionRegistry, RuntimeType}, parser::{ASTNode, Parser}};
 
 pub struct Interpreter {
     env: Env,
+    fr: FunctionRegistry,
 }
 
 impl Interpreter {
 
     pub fn new() -> Self {
         Interpreter {
-            env: Env::new(None)
+            env: Env::new(None),
+            fr: FunctionRegistry::new()
         }
     }
 
@@ -69,9 +71,10 @@ impl Interpreter {
         unreachable!("Expected UnaryExpression node!");
     }
 
-    fn function_call(&self, node: Rc<ASTNode>) -> RuntimeValue {
+    fn function_call(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
         if let ASTNode::FunctionCall { name, args } = node.as_ref() {
-            return RuntimeValue::Bool(false);
+            let runtime_values = args.iter().map(|node| self.initial_expression(Rc::clone(node))).collect();
+            return self.fr.call(name, runtime_values);
         }
         unreachable!("Expected FunctionCall node!")
     }
@@ -165,7 +168,11 @@ mod test {
     #[test]
     fn i_test_var_dec() {
         let mut i = Interpreter::new();
-        let output = i.run("let x = 6; x + 4;3;");
+        let output = i.run(r#"
+            let x = 10 + 5;
+            let y = x * 2;
+            print("The result is " + y);
+            "#);
         dbg!(&output);
         dbg!(&i.env);
     }

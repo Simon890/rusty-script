@@ -8,7 +8,7 @@ pub struct Tokenizer<'a> {
 
 impl<'a> Tokenizer<'a> {
     pub fn new(text: &'a str) -> Self {
-        Tokenizer { pos: 0, text, tokens: vec![] }
+        Tokenizer { pos: 0, text: text.trim(), tokens: vec![] }
     }
 
     pub fn tokenize(&mut self) -> Vec<Token> {

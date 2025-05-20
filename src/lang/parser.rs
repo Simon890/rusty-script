@@ -16,7 +16,23 @@ impl Parser {
     pub fn parse(&mut self) -> Vec<Rc<ASTNode>> {
         let mut tokens: Vec<Rc<ASTNode>> = vec![];
         while !self.is_eof() {
-            let token = self.parse_sum_expression();
+            let token = match self.current() {
+                Token::Identifier { value } if value == "let" => self.parse_var_declaration(),
+                Token::Identifier { value } => {
+                    if self.expect(TokenKind::LeftParen) {
+                        self.parse_function()
+                    } else {
+                        self.advance(None);
+                        Rc::new(ASTNode::Identifier { name: value })
+                    }
+                },
+                value => {
+                    if self.is_expr(&value) {
+                        self.parse_sum_expression();
+                    }
+                    panic!("Not recognized token!")
+                }
+            };
             self.advance(Some(TokenKind::SemiColon));
             tokens.push(token);
         }
@@ -57,8 +73,26 @@ impl Parser {
         token == next_token.kind()
     }
 
+    fn is_expr(&self, token: &Token) -> bool {
+        matches!(
+            token.kind(), 
+            TokenKind::NumberLiteral | 
+            TokenKind::StringLiteral | 
+            TokenKind::LeftParen | 
+            TokenKind::Identifier |
+            TokenKind::SubOp |
+            TokenKind::AddOp
+        )
+    }
+
     fn parse_expr(&mut self) -> Rc<ASTNode> {
         match self.current() {
+            Token::LeftParen => {
+                self.advance(None);
+                let node = self.parse_sum_expression();
+                self.advance(Some(TokenKind::RightParen));
+                node
+            },
             Token::NumberLiteral { value } => {
                 self.advance(None);
                 Rc::new(ASTNode::Number(value))
@@ -93,7 +127,7 @@ impl Parser {
         self.advance(Some(TokenKind::Identifier));
         let var_name = self.advance(Some(TokenKind::Identifier));
         self.advance(Some(TokenKind::EqOp));
-        let value = self.parse_expr();
+        let value = self.parse_sum_expression();
         Rc::new(
             ASTNode::VarDeclaration { name: var_name.as_string(), value }
         )
@@ -112,7 +146,7 @@ impl Parser {
     fn parse_args(&mut self) -> Vec<Rc<ASTNode>> {
         let mut args: Vec<Rc<ASTNode>> = Vec::new();
         while !self.is_eof() && self.current().kind() != TokenKind::RightParen {
-            let arg = self.parse_expr();
+            let arg = self.parse_sum_expression();
             args.push(arg);
             if self.current().kind() == TokenKind::RightParen {
                 break;
