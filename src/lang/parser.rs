@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::tokenizer::{Token, TokenKind, Tokenizer};
 
 pub struct Parser {
@@ -11,8 +13,8 @@ impl Parser {
         Parser { tokens, pos: 0 }
     }
 
-    pub fn parse(&mut self) -> Vec<ASTNode> {
-        let mut tokens: Vec<ASTNode> = vec![];
+    pub fn parse(&mut self) -> Vec<Rc<ASTNode>> {
+        let mut tokens: Vec<Rc<ASTNode>> = vec![];
         while !self.is_eof() {
             let token = self.parse_sum_expression();
             tokens.push(token);
@@ -54,42 +56,62 @@ impl Parser {
         token == next_token.kind()
     }
 
-    fn parse_expression(&mut self) -> ASTNode {
+    fn parse_expr(&mut self) -> Rc<ASTNode> {
         match self.current() {
             Token::NumberLiteral { value } => {
                 self.advance(None);
-                ASTNode::Number(value)
+                Rc::new(ASTNode::Number(value))
             },
             Token::BoolLiteral { value } => {
                 self.advance(None);
-                ASTNode::Bool(value)
+                Rc::new(ASTNode::Bool(value))
             },
             Token::StringLiteral { value } => {
                 self.advance(None);
-                ASTNode::String(value)
-            },
-            Token::Identifier { .. } => {
-                self.parse_function()
+                Rc::new(ASTNode::String(value))
             },
             Token::SubOp | Token::AddOp => {
                 self.parse_unary_expression()
+            },
+            Token::Identifier { value } if value == "let" => {
+                self.parse_var_declaration()
+            },
+            Token::Identifier { value } => {
+                if self.expect(TokenKind::LeftParen) {
+                    self.parse_function()
+                } else {
+                    self.advance(None);
+                    Rc::new(ASTNode::Identifier { name: value })
+                }
             },
             token => panic!("TODO! {:#?}", token)
         }
     }
 
-    fn parse_function(&mut self) -> ASTNode {
+    fn parse_var_declaration(&mut self) -> Rc<ASTNode> {
+        self.advance(Some(TokenKind::Identifier));
+        let var_name = self.advance(Some(TokenKind::Identifier));
+        self.advance(Some(TokenKind::EqOp));
+        let value = self.parse_expr();
+        Rc::new(
+            ASTNode::VarDeclaration { name: var_name.as_string(), value }
+        )
+    }
+
+    fn parse_function(&mut self) -> Rc<ASTNode> {
         let ident = self.advance(Some(TokenKind::Identifier));
         self.advance(Some(TokenKind::LeftParen));
         let args = self.parse_args();
         self.advance(Some(TokenKind::RightParen));
-        return ASTNode::FunctionCall { name: ident.as_string(), args: Box::new(args) };
+        return Rc::new(
+            ASTNode::FunctionCall { name: ident.as_string(), args }
+        );
     }
 
-    fn parse_args(&mut self) -> Vec<ASTNode> {
-        let mut args: Vec<ASTNode> = Vec::new();
+    fn parse_args(&mut self) -> Vec<Rc<ASTNode>> {
+        let mut args: Vec<Rc<ASTNode>> = Vec::new();
         while !self.is_eof() && self.current().kind() != TokenKind::RightParen {
-            let arg = self.parse_expression();
+            let arg = self.parse_expr();
             args.push(arg);
             if self.current().kind() == TokenKind::RightParen {
                 break;
@@ -99,17 +121,17 @@ impl Parser {
         args
     }
 
-    fn parse_pow_expression(&mut self) -> ASTNode {
-        let mut left = self.parse_expression();
+    fn parse_pow_expression(&mut self) -> Rc<ASTNode> {
+        let mut left = self.parse_expr();
         while !self.is_eof() && self.current().kind() == TokenKind::PowOp {
             self.advance(Some(TokenKind::PowOp));
-            let right = self.parse_expression();
-            left = ASTNode::BinaryExpression { left: Box::new(left), right: Box::new(right), operator: '^' }
+            let right = self.parse_expr();
+            left = Rc::new(ASTNode::BinaryExpression { left, right, operator: '^' })
         }
         left
     }
 
-    fn parse_sum_expression(&mut self) -> ASTNode {
+    fn parse_sum_expression(&mut self) -> Rc<ASTNode> {
         let mut left = self.parse_mul_expression();
         while !self.is_eof() && (self.current().kind() == TokenKind::AddOp || self.current().kind() == TokenKind::SubOp) {
             let expect = match self.current().kind() {
@@ -123,30 +145,32 @@ impl Parser {
                 _ => unreachable!("Unexpected operator")
             };
             let right = self.parse_mul_expression();
-            left = ASTNode::BinaryExpression { left: Box::new(left), right: Box::new(right) , operator }
+            left = Rc::new(ASTNode::BinaryExpression { left, right , operator })
         }
         left
     }
 
-    fn parse_mul_expression(&mut self) -> ASTNode {
+    fn parse_mul_expression(&mut self) -> Rc<ASTNode> {
         let mut left = self.parse_pow_expression();
         while !self.is_eof() && self.current().kind() == TokenKind::MulOp {
             self.advance(Some(TokenKind::MulOp));
             let right = self.parse_pow_expression();
-            left = ASTNode::BinaryExpression { left: Box::new(left), right: Box::new(right), operator: '*' }
+            left = Rc::new(ASTNode::BinaryExpression { left, right, operator: '*' })
         }
         left
     }
 
-    fn parse_unary_expression(&mut self) -> ASTNode {
+    fn parse_unary_expression(&mut self) -> Rc<ASTNode> {
         let token_sign = self.advance(None);
         let sign = match token_sign {
             Token::SubOp => '-',
             Token::AddOp => '+',
             _ => unreachable!("Unexpected sign")
         };
-        let expression = self.parse_expression();
-        ASTNode::UnaryExpression { sign, expr: Box::new(expression) }
+        let expression = self.parse_expr();
+        Rc::new(
+            ASTNode::UnaryExpression { sign, expr: expression }
+        )
     }
 }
 
@@ -155,17 +179,35 @@ pub enum ASTNode {
     Number(f32),
     Bool(bool),
     String(String),
+    Identifier {
+        name: String
+    },
     FunctionCall {
         name: String,
-        args: Box<Vec<ASTNode>>
+        args: Vec<Rc<ASTNode>>
     },
     BinaryExpression {
-        left: Box<ASTNode>,
-        right: Box<ASTNode>,
+        left: Rc<ASTNode>,
+        right: Rc<ASTNode>,
         operator: char,
     },
     UnaryExpression {
         sign: char,
-        expr: Box<ASTNode>
+        expr: Rc<ASTNode>
+    },
+    VarDeclaration {
+        name: String,
+        value: Rc<ASTNode>
+    },
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_var_declaration() {
+        let mut p = Parser::new("let x = 4");
+        dbg!(&p.parse());
     }
 }

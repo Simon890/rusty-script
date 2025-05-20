@@ -1,44 +1,54 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{ops::{Add, Div, Mul, Sub}, rc::Rc};
 
-use super::{func::function_registry::RuntimeType, parser::{ASTNode, Parser}};
+use super::{env::Env, func::function_registry::RuntimeType, parser::{ASTNode, Parser}};
 
 pub struct Interpreter {
-    ast: Vec<ASTNode>,
+    env: Env,
 }
 
 impl Interpreter {
 
     pub fn new() -> Self {
         Interpreter {
-            ast: vec![]
+            env: Env::new(None)
         }
     }
 
     pub fn run(&mut self, input: &str) -> RuntimeValue {
-        self.ast = Parser::new(input).parse();
-
+        let ast = Parser::new(input).parse();
         let mut last_value = RuntimeValue::Null;
-        for node in &self.ast {
-            last_value = self.initial_expression(node.clone());
+        for node in ast {
+            last_value = self.initial_expression(node);
         }
         last_value
     }
 
-    fn initial_expression(&self, node: ASTNode) -> RuntimeValue {
-        match node {
-            ASTNode::Number(value) => RuntimeValue::Number(value),
-            ASTNode::String(value) => RuntimeValue::String(value),
-            ASTNode::Bool(value) => RuntimeValue::Bool(value),
+    fn initial_expression(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        match node.as_ref() {
+            ASTNode::Number(value) => RuntimeValue::Number(*value),
+            ASTNode::String(value) => RuntimeValue::String(value.clone()),
+            ASTNode::Bool(value) => RuntimeValue::Bool(*value),
             ASTNode::BinaryExpression { .. } => self.binary_expression(node),
             ASTNode::UnaryExpression { .. } => self.unary_expression(node),
             ASTNode::FunctionCall { .. } => self.function_call(node),
+            ASTNode::VarDeclaration { .. } => self.var_declaration(node),
+            ASTNode::Identifier { name } => self.env.get(name).clone()
         }
     }
 
-    fn binary_expression(&self, node: ASTNode) -> RuntimeValue {
-        if let ASTNode::BinaryExpression { left, right, operator } = node {
-            let left = self.initial_expression(*left);
-            let right = self.initial_expression(*right);
+    fn var_declaration(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::VarDeclaration { name, value } = node.as_ref() {
+            let var_value = self.initial_expression(Rc::clone(value));
+            self.env.add(name.to_owned(), var_value);
+            return RuntimeValue::Null;
+        }
+        RuntimeValue::Null
+    }
+
+    fn binary_expression(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::BinaryExpression { left, right, operator } = node.as_ref() {
+            let left = self.initial_expression(Rc::clone(left));
+            let right = self.initial_expression(Rc::clone(right));
             return match operator {
                 '-' => left - right,
                 '+' => left + right,
@@ -51,16 +61,16 @@ impl Interpreter {
         unreachable!("Expected BinaryExpression node!");
     }
 
-    fn unary_expression(&self, node: ASTNode) -> RuntimeValue {
-        if let ASTNode::UnaryExpression { sign, expr } = node {
-            let value = self.initial_expression(*expr);
-            return value.mul(RuntimeValue::Number(if sign == '-' {-1.0} else {1.0}));
+    fn unary_expression(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::UnaryExpression { sign, expr } = node.as_ref() {
+            let value = self.initial_expression(Rc::clone(expr));
+            return value.mul(RuntimeValue::Number(if *sign == '-' {-1.0} else {1.0}));
         }
         unreachable!("Expected UnaryExpression node!");
     }
 
-    fn function_call(&self, node: ASTNode) -> RuntimeValue {
-        if let ASTNode::FunctionCall { name, args } = node {
+    fn function_call(&self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::FunctionCall { name, args } = node.as_ref() {
             return RuntimeValue::Bool(false);
         }
         unreachable!("Expected FunctionCall node!")
@@ -145,5 +155,18 @@ impl RuntimeValue {
             Self::String(..) => RuntimeType::String,
             Self::Null => RuntimeType::Null,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn i_test_var_dec() {
+        let mut i = Interpreter::new();
+        let output = i.run("let x = 6 x + 4");
+        dbg!(&output);
+        dbg!(&i.env);
     }
 }

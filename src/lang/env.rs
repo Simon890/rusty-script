@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use super::interpreter::RuntimeValue;
 
-struct Env {
+#[derive(Debug)]
+pub struct Env {
     parent: Option<Box<Env>>,
     vars: HashMap<String, RuntimeValue>
 }
