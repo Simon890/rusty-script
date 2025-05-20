@@ -17,6 +17,7 @@ impl Parser {
         let mut tokens: Vec<Rc<ASTNode>> = vec![];
         while !self.is_eof() {
             let token = self.parse_sum_expression();
+            self.advance(Some(TokenKind::SemiColon));
             tokens.push(token);
         }
         tokens
@@ -207,7 +208,7 @@ mod test {
 
     #[test]
     fn test_var_declaration() {
-        let mut p = Parser::new("let x = 4");
+        let mut p = Parser::new("let x = 4;");
         dbg!(&p.parse());
     }
 }

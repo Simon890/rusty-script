@@ -165,7 +165,7 @@ mod test {
     #[test]
     fn i_test_var_dec() {
         let mut i = Interpreter::new();
-        let output = i.run("let x = 6 x + 4");
+        let output = i.run("let x = 6; x + 4;3;");
         dbg!(&output);
         dbg!(&i.env);
     }
