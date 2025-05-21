@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::interpreter::RuntimeValue;
+use super::{interpreter::RuntimeValue};
 
 #[derive(Debug)]
 pub struct Env {
@@ -16,6 +16,16 @@ impl Env {
     }
 
     pub fn add(&mut self, var_name: String, value: RuntimeValue) {
+        if self.vars.contains_key(&var_name) {
+            panic!("Variable {} was already declared", var_name)
+        }
+        self.vars.insert(var_name, value);
+    }
+
+    pub fn update(&mut self, var_name: String, value: RuntimeValue) {
+        if !self.vars.contains_key(&var_name) {
+            panic!("Variable {} does not exist", var_name);
+        }
         self.vars.insert(var_name, value);
     }
 

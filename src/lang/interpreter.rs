@@ -34,6 +34,7 @@ impl Interpreter {
             ASTNode::UnaryExpression { .. } => self.unary_expression(node),
             ASTNode::FunctionCall { .. } => self.function_call(node),
             ASTNode::VarDeclaration { .. } => self.var_declaration(node),
+            ASTNode::VarAssignment { .. } => self.var_assignment(node),
             ASTNode::Identifier { name } => self.env.get(name).clone()
         }
     }
@@ -44,7 +45,16 @@ impl Interpreter {
             self.env.add(name.to_owned(), var_value);
             return RuntimeValue::Null;
         }
-        RuntimeValue::Null
+        unreachable!("Expected VarDeclaration node!");
+    }
+
+    fn var_assignment(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::VarAssignment { name, value } = node.as_ref() {
+            let var_value = self.initial_expression(Rc::clone(value));
+            self.env.update(name.to_owned(), var_value);
+            return RuntimeValue::Null;
+        }
+        unreachable!("Expected VarAssignment node!");
     }
 
     fn binary_expression(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
@@ -171,8 +181,10 @@ mod test {
         let output = i.run(r#"
             let x = 10 + 5;
             let y = x * 2;
+            y = 8;
             print("The result is " + y);
             "#);
+        // dbg!(&i.env);
         dbg!(&output);
         dbg!(&i.env);
     }

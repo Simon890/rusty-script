@@ -21,6 +21,8 @@ impl Parser {
                 Token::Identifier { value } => {
                     if self.expect(TokenKind::LeftParen) {
                         self.parse_function()
+                    } else if self.expect(TokenKind::EqOp) {
+                        self.parse_var_assignment()
                     } else {
                         self.advance(None);
                         Rc::new(ASTNode::Identifier { name: value })
@@ -114,6 +116,8 @@ impl Parser {
             Token::Identifier { value } => {
                 if self.expect(TokenKind::LeftParen) {
                     self.parse_function()
+                } else if self.expect(TokenKind::EqOp) {
+                    self.parse_var_assignment()
                 } else {
                     self.advance(None);
                     Rc::new(ASTNode::Identifier { name: value })
@@ -121,6 +125,15 @@ impl Parser {
             },
             token => panic!("TODO! {:#?}", token)
         }
+    }
+
+    fn parse_var_assignment(&mut self) -> Rc<ASTNode> {
+        let var_name = self.advance(Some(TokenKind::Identifier));
+        self.advance(Some(TokenKind::EqOp));
+        let value = self.parse_sum_expression();
+        Rc::new(
+            ASTNode::VarAssignment { name: var_name.as_string(), value }
+        )
     }
 
     fn parse_var_declaration(&mut self) -> Rc<ASTNode> {
@@ -234,6 +247,10 @@ pub enum ASTNode {
         name: String,
         value: Rc<ASTNode>
     },
+    VarAssignment {
+        name: String,
+        value: Rc<ASTNode>
+    }
 }
 
 #[cfg(test)]
