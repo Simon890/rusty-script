@@ -23,16 +23,42 @@ impl FunctionRegistry {
 
     pub fn call(&self, function_name: &str, args: Vec<RuntimeValue>) -> RuntimeValue {
         let function = self.functions.get(function_name).expect(&format!("Function {} does not exist", function_name));
-        if function.expected_params != args.len() {
-            panic!("Function {} expects {} params, got {}", function.name, function.expected_params, args.len())
+        match function.expected_params {
+            ParamCount::Fixed(num) => {
+                if num != args.len() {
+                    panic!("Function {} expects {} params, got {}", function.name, num, args.len())
+                }
+            },
+            ParamCount::Dynamic(min) => {
+                if args.len() < min {
+                    panic!("Function {} expects {} params as minimum, got {}", function.name, min, args.len())
+                }
+            },
         }
 
+        let mut index: usize = 0;
         for (i, arg) in args.iter().enumerate() {
-            if !arg.matches_type(&function.param_types[i]) {
-                panic!("Param {} of function {} expected {:?}, got {:?}", i, function.name, function.param_types[i], arg)
+            index = i;
+            if !function.expected_params.is_fixed() && i >= function.param_types.len() {
+                index = function.param_types.len() - 1;
+            }
+            if !arg.matches_type(&function.param_types[index]) {
+                panic!("Param {} of function {} expected {:?}, got {:?}", i, function.name, function.param_types[index], arg)
             }
         }
         (function.implementation)(Arguments::new(args))
+    }
+}
+
+#[derive(PartialEq)]
+pub enum ParamCount {
+    Fixed(usize),
+    Dynamic(usize)
+}
+
+impl ParamCount {
+    pub fn is_fixed(&self) -> bool {
+        matches!(&self, Self::Fixed(..))
     }
 }
 
@@ -60,13 +86,13 @@ impl RuntimeValue {
 
 pub struct Function {
     name: String,
-    expected_params: usize,
+    expected_params: ParamCount,
     param_types: Vec<RuntimeType>,
     implementation: Box<dyn Fn(Arguments) -> RuntimeValue>
 }
 
 impl Function {
-    pub fn new(name: String, expected_params: usize, param_types: Vec<RuntimeType>, implementation: Box<dyn Fn(Arguments) -> RuntimeValue>) -> Self {
+    pub fn new(name: String, expected_params: ParamCount, param_types: Vec<RuntimeType>, implementation: Box<dyn Fn(Arguments) -> RuntimeValue>) -> Self {
         Self { name, expected_params, param_types, implementation }
     }
 }
@@ -146,7 +172,7 @@ mod test {
         let mut registry = FunctionRegistry::new();
         registry.add_function(Function {
             name: "sum".to_string(),
-            expected_params: 2,
+            expected_params: ParamCount::Fixed(2),
             param_types: vec![RuntimeType::Number, RuntimeType::Number],
             implementation: Box::new(|args: Arguments| -> RuntimeValue {
                 let num1 = args.as_f32(0);
@@ -159,22 +185,25 @@ mod test {
 
         registry.add_function(Function {
             name: "concat".to_string(),
-            expected_params: 2,
+            expected_params: ParamCount::Dynamic(2),
             param_types: vec![RuntimeType::String, RuntimeType::String],
             implementation: Box::new(|args: Arguments| -> RuntimeValue {
-                let str1 = args.as_str(0);
-                let str2 = args.as_str(1);
-                let result = format!("{}{}", str1, str2);
+                let mut result = String::new();
+                for i in 0..args.len() {
+                    result.push_str(&args.as_str(i));
+                }
                 RuntimeValue::String(result)
             })
         });
 
-        let result2 = registry.call("concat", vec![RuntimeValue::String("hello ".to_owned()), RuntimeValue::String("world".to_owned())]);
-        assert_eq!(result2, RuntimeValue::String("hello world".to_owned()));
+        let result2 = registry.call("concat", vec![RuntimeValue::String("hello ".to_owned()), RuntimeValue::String("world".to_owned()), RuntimeValue::String(" simon".to_owned())]);
+        
+        assert_eq!(result2, RuntimeValue::String("hello world simon".to_owned()));
 
         let result3 = registry.call("print", vec![RuntimeValue::Number(34.)]);
         assert_eq!(result3, RuntimeValue::Null);
 
+        registry.call("print", vec![RuntimeValue::String("Write 'hi!'".to_owned())]);
         let result3 = registry.call("read", vec![]);
         assert_eq!(result3, RuntimeValue::String("hi!".to_string()));
     }

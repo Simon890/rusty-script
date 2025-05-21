@@ -2,13 +2,13 @@ use std::io;
 
 use crate::lang::interpreter::RuntimeValue;
 
-use super::function_registry::{Function, FunctionRegistry, RuntimeType};
+use super::function_registry::{Function, FunctionRegistry, ParamCount, RuntimeType};
 
 pub fn load_native_functions(fr: &mut FunctionRegistry) {
     fr.add_function(
         Function::new(
             "print".to_string(),
-            1,
+            ParamCount::Fixed(1),
             vec![RuntimeType::Any],
             Box::new(|args| {
                 let value = args.as_any(0);
@@ -25,7 +25,7 @@ pub fn load_native_functions(fr: &mut FunctionRegistry) {
     fr.add_function(
         Function::new(
             "read".to_string(),
-            0,
+            ParamCount::Fixed(0),
             vec![],
             Box::new(|_| {
                 let mut value = String::new();
