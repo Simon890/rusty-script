@@ -68,9 +68,13 @@ impl Parser {
     }
 
     fn parse_expr_or_stmt(&mut self) -> Rc<ASTNode> {
+        let mut eat_semicolon = true;
         let token = match self.current() {
             Token::Identifier { value } if value == "let" => self.parse_var_declaration(),
-            Token::Identifier { value } if value == "if" => self.parse_if_stmt(),
+            Token::Identifier { value } if value == "if" => {
+                eat_semicolon = false;
+                self.parse_if_stmt()
+            },
             Token::Identifier { value } => {
                 if self.expect(TokenKind::LeftParen) {
                     self.parse_function()
@@ -88,7 +92,11 @@ impl Parser {
                 panic!("Not recognized token!")
             }
         };
-        self.advance(Some(TokenKind::SemiColon));
+        if eat_semicolon {
+            self.advance(Some(TokenKind::SemiColon));
+        } else if self.current().kind() == TokenKind::SemiColon {
+            self.advance(Some(TokenKind::SemiColon));
+        }
         token
     }
 
