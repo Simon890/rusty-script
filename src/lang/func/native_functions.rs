@@ -125,4 +125,28 @@ pub fn load_native_functions(fr: &mut FunctionRegistry) {
             RuntimeValue::Bool(Path::new(path).exists())
         })
     ));
+    fr.add_function(Function::new(
+        "createDir".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            match fs::create_dir_all(path) {
+                Ok(_) => RuntimeValue::Bool(true),
+                Err(_) => RuntimeValue::Bool(false)
+            }
+        })
+    ));
+    fr.add_function(Function::new(
+        "deleteDir".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            match fs::remove_dir_all(path) {
+                Ok(_) => RuntimeValue::Bool(true),
+                Err(_) => RuntimeValue::Bool(false)
+            }
+        })
+    ));
 }
