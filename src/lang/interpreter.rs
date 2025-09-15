@@ -1,4 +1,4 @@
-use std::{ops::{Add, Div, Mul, Sub}, rc::Rc};
+use std::{cmp::Ordering, ops::{Add, Div, Mul, Sub}, rc::Rc};
 
 use super::{env::Env, func::function_registry::{FunctionRegistry, RuntimeType}, parser::{ASTNode, Parser}};
 
@@ -35,8 +35,27 @@ impl Interpreter {
             ASTNode::FunctionCall { .. } => self.function_call(node),
             ASTNode::VarDeclaration { .. } => self.var_declaration(node),
             ASTNode::VarAssignment { .. } => self.var_assignment(node),
-            ASTNode::Identifier { name } => self.env.get(name).clone()
+            ASTNode::Identifier { name } => self.env.get(name).clone(),
+            ASTNode::IfStmt { .. } => self.if_stmt(node),
         }
+    }
+
+    fn if_stmt(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
+        if let ASTNode::IfStmt { expr, true_block } = node.as_ref() {
+            let condition_value = self.initial_expression(Rc::clone(expr));
+            dbg!(&condition_value);
+            match condition_value {
+                RuntimeValue::Bool(value) if value => {
+                    let mut last_value : RuntimeValue = RuntimeValue::Null;
+                    for node in true_block {
+                        last_value = self.initial_expression(Rc::clone(node));
+                    }
+                    return last_value
+                }
+                _ => panic!("Expression inside if must return a bool value")
+            }
+        }
+        unreachable!("Expected IfStmt node!")
     }
 
     fn var_declaration(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
@@ -67,6 +86,9 @@ impl Interpreter {
                 '*' => left * right,
                 '/' => left / right,
                 '^' => left.pow(&right),
+                '>' => RuntimeValue::Bool(left > right),
+                '<' => RuntimeValue::Bool(left < right),
+                '=' => RuntimeValue::Bool(left == right),
                 _ => unreachable!("Unexpected operator")
             };
         }
@@ -145,6 +167,30 @@ impl Div for RuntimeValue {
                 Self::Number(left_value / right_value)
             }
             _ => panic!("Cannot divide {:?} and {:?}", self, rhs)
+        }
+    }
+}
+
+impl PartialOrd for RuntimeValue {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (&self, other) {
+            (Self::Number(left_value), Self::Number(right_value)) => {
+                if left_value > right_value {
+                    return Some(Ordering::Greater);
+                } else if left_value < right_value {
+                    return Some(Ordering::Less);
+                }
+                return Some(Ordering::Equal);
+            }
+            (Self::String(left_value), Self::String(right_value)) => {
+                if left_value > right_value {
+                    return Some(Ordering::Greater);
+                } else if left_value < right_value {
+                    return Some(Ordering::Less);
+                }
+                return Some(Ordering::Equal);
+            },
+            _ => panic!("Cannot compare {:?} and {:?}", self.to_type(), other.to_type())
         }
     }
 }

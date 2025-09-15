@@ -16,27 +16,7 @@ impl Parser {
     pub fn parse(&mut self) -> Vec<Rc<ASTNode>> {
         let mut tokens: Vec<Rc<ASTNode>> = vec![];
         while !self.is_eof() {
-            let token = match self.current() {
-                Token::Identifier { value } if value == "let" => self.parse_var_declaration(),
-                Token::Identifier { value } => {
-                    if self.expect(TokenKind::LeftParen) {
-                        self.parse_function()
-                    } else if self.expect(TokenKind::EqOp) {
-                        self.parse_var_assignment()
-                    } else {
-                        self.advance(None);
-                        Rc::new(ASTNode::Identifier { name: value })
-                    }
-                },
-                value => {
-                    if self.is_expr(&value) {
-                        self.parse_sum_expression();
-                    }
-                    panic!("Not recognized token!")
-                }
-            };
-            self.advance(Some(TokenKind::SemiColon));
-            tokens.push(token);
+            tokens.push(self.parse_expr_or_stmt());
         }
         tokens
     }
@@ -87,11 +67,36 @@ impl Parser {
         )
     }
 
+    fn parse_expr_or_stmt(&mut self) -> Rc<ASTNode> {
+        let token = match self.current() {
+            Token::Identifier { value } if value == "let" => self.parse_var_declaration(),
+            Token::Identifier { value } if value == "if" => self.parse_if_stmt(),
+            Token::Identifier { value } => {
+                if self.expect(TokenKind::LeftParen) {
+                    self.parse_function()
+                } else if self.expect(TokenKind::EqOp) {
+                    self.parse_var_assignment()
+                } else {
+                    self.advance(None);
+                    Rc::new(ASTNode::Identifier { name: value })
+                }
+            },
+            value => {
+                if self.is_expr(&value) {
+                    self.parse_bool_expression();
+                }
+                panic!("Not recognized token!")
+            }
+        };
+        self.advance(Some(TokenKind::SemiColon));
+        token
+    }
+
     fn parse_expr(&mut self) -> Rc<ASTNode> {
         match self.current() {
             Token::LeftParen => {
                 self.advance(None);
-                let node = self.parse_sum_expression();
+                let node = self.parse_bool_expression();
                 self.advance(Some(TokenKind::RightParen));
                 node
             },
@@ -179,6 +184,25 @@ impl Parser {
         left
     }
 
+    fn parse_bool_expression(&mut self) -> Rc<ASTNode> {
+        let mut left = self.parse_sum_expression();
+        while !self.is_eof() && (self.current().kind() == TokenKind::GtOp || self.current().kind() == TokenKind::LtOp) {
+            let expect = match self.current().kind() {
+                TokenKind::GtOp => Some(TokenKind::GtOp),
+                _ => Some(TokenKind::LtOp)
+            };
+            let math_op = self.advance(expect);
+            let operator =  match math_op {
+                Token::GtOp => '>',
+                Token::LtOp => '<',
+                _ => unreachable!("Unexpected operator")
+            };
+            let right = self.parse_sum_expression();
+            left = Rc::new(ASTNode::BinaryExpression { left, right, operator })
+        }
+        left
+    }
+
     fn parse_sum_expression(&mut self) -> Rc<ASTNode> {
         let mut left = self.parse_mul_expression();
         while !self.is_eof() && (self.current().kind() == TokenKind::AddOp || self.current().kind() == TokenKind::SubOp) {
@@ -220,6 +244,24 @@ impl Parser {
             ASTNode::UnaryExpression { sign, expr: expression }
         )
     }
+
+    fn parse_if_stmt(&mut self) -> Rc<ASTNode> {
+        self.advance(Some(TokenKind::Identifier));
+        let expr = self.parse_expr();
+        self.advance(Some(TokenKind::LeftCurlyBrace));
+        let mut true_block : Vec<Rc<ASTNode>> = vec![];
+        loop {
+            let token = self.parse_expr_or_stmt();
+            true_block.push(token);
+            if self.current().kind() == TokenKind::RightCurlyBrace {
+                break;
+            }
+        }
+        self.advance(Some(TokenKind::RightCurlyBrace));
+        Rc::new(
+            ASTNode::IfStmt { expr, true_block }
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -250,6 +292,10 @@ pub enum ASTNode {
     VarAssignment {
         name: String,
         value: Rc<ASTNode>
+    },
+    IfStmt {
+        expr: Rc<ASTNode>,
+        true_block: Vec<Rc<ASTNode>>
     }
 }
 
