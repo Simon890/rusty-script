@@ -1,4 +1,4 @@
-use std::io;
+use std::{fs, io, path::Path};
 
 use crate::lang::interpreter::RuntimeValue;
 
@@ -77,6 +77,52 @@ pub fn load_native_functions(fr: &mut FunctionRegistry) {
             let idx_end = *args.as_f32(2) as usize;
             let sub_str = &str_value[idx_start..=idx_end];
             RuntimeValue::String(sub_str.to_string())
+        })
+    ));
+    fr.add_function(Function::new(
+        "writeFile".to_string(),
+        ParamCount::Fixed(2),
+        vec![RuntimeType::String, RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            let contents = args.as_str(1);
+            match fs::write(path, contents) {
+                Ok(_) => RuntimeValue::Bool(true),
+                Err(_) => RuntimeValue::Bool(false)
+            }
+        })
+    ));
+    fr.add_function(Function::new(
+        "readFile".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            match fs::read_to_string(path) {
+                Ok(content) => RuntimeValue::String(content),
+                Err(_) => RuntimeValue::Null
+            }
+        })
+    ));
+    fr.add_function(Function::new(
+        "deleteFile".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            match fs::remove_file(path) {
+                Ok(_) => RuntimeValue::Bool(true),
+                Err(_) => RuntimeValue::Bool(false)
+            }
+        })
+    ));
+    fr.add_function(Function::new(
+        "exists".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let path = args.as_str(0);
+            RuntimeValue::Bool(Path::new(path).exists())
         })
     ));
 }
