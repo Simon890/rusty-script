@@ -37,4 +37,46 @@ pub fn load_native_functions(fr: &mut FunctionRegistry) {
             })
         )
     );
+    fr.add_function(Function::new(
+        "random".to_string(),
+        ParamCount::Fixed(0),
+        vec![],
+        Box::new(|_| {
+            let random_number = rand::random::<f32>();
+            RuntimeValue::Number(random_number)
+        })
+    ));
+    fr.add_function(Function::new(
+        "toNumber".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::String],
+        Box::new(|args| {
+            let str_value = args.as_str(0);
+            match str_value.parse::<f32>() {
+                Ok(n) => RuntimeValue::Number(n),
+                Err(_) => RuntimeValue::Null
+            }
+        })
+    ));
+    fr.add_function(Function::new(
+        "toString".to_string(),
+        ParamCount::Fixed(1),
+        vec![RuntimeType::Number],
+        Box::new(|args| {
+            let num_value = args.as_f32(0);
+            RuntimeValue::String(num_value.to_string())
+        })
+    ));
+    fr.add_function(Function::new(
+        "substring".to_string(),
+        ParamCount::Fixed(3),
+        vec![RuntimeType::String, RuntimeType::Number, RuntimeType::Number],
+        Box::new(|args| {
+            let str_value = args.as_str(0);
+            let idx_start = *args.as_f32(1) as usize;
+            let idx_end = *args.as_f32(2) as usize;
+            let sub_str = &str_value[idx_start..=idx_end];
+            RuntimeValue::String(sub_str.to_string())
+        })
+    ));
 }
