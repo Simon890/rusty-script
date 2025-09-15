@@ -262,6 +262,9 @@ impl Parser {
         self.advance(Some(TokenKind::RightCurlyBrace));
         if self.current().kind() == TokenKind::Identifier && self.current().as_string() == "else" {
             self.advance(Some(TokenKind::Identifier));
+            if(self.current().kind() == TokenKind::Identifier && self.current().as_string() == "if") {
+                return self.parse_if_stmt();
+            }
             self.advance(Some(TokenKind::LeftCurlyBrace));
             loop {
                 //question: check for EOF?
