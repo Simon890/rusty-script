@@ -250,7 +250,9 @@ impl Parser {
         let expr = self.parse_expr();
         self.advance(Some(TokenKind::LeftCurlyBrace));
         let mut true_block : Vec<Rc<ASTNode>> = vec![];
+        let mut false_block : Option<Vec<Rc<ASTNode>>> = None;
         loop {
+            //question: Check for EOF?
             let token = self.parse_expr_or_stmt();
             true_block.push(token);
             if self.current().kind() == TokenKind::RightCurlyBrace {
@@ -258,8 +260,21 @@ impl Parser {
             }
         }
         self.advance(Some(TokenKind::RightCurlyBrace));
+        if self.current().kind() == TokenKind::Identifier && self.current().as_string() == "else" {
+            self.advance(Some(TokenKind::Identifier));
+            self.advance(Some(TokenKind::LeftCurlyBrace));
+            loop {
+                //question: check for EOF?
+                let token = self.parse_expr_or_stmt();
+                false_block.get_or_insert_with(Vec::new).push(token);
+                if self.current().kind() == TokenKind::RightCurlyBrace {
+                    break;
+                }
+            }
+            self.advance(Some(TokenKind::RightCurlyBrace));
+        }
         Rc::new(
-            ASTNode::IfStmt { expr, true_block }
+            ASTNode::IfStmt { expr, true_block, false_block }
         )
     }
 }
@@ -295,7 +310,8 @@ pub enum ASTNode {
     },
     IfStmt {
         expr: Rc<ASTNode>,
-        true_block: Vec<Rc<ASTNode>>
+        true_block: Vec<Rc<ASTNode>>,
+        false_block: Option<Vec<Rc<ASTNode>>>
     }
 }
 

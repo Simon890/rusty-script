@@ -41,14 +41,20 @@ impl Interpreter {
     }
 
     fn if_stmt(&mut self, node: Rc<ASTNode>) -> RuntimeValue {
-        if let ASTNode::IfStmt { expr, true_block } = node.as_ref() {
+        if let ASTNode::IfStmt { expr, true_block, false_block } = node.as_ref() {
             let condition_value = self.initial_expression(Rc::clone(expr));
             dbg!(&condition_value);
             match condition_value {
-                RuntimeValue::Bool(value) if value => {
+                RuntimeValue::Bool(condition_value) => {
                     let mut last_value : RuntimeValue = RuntimeValue::Null;
-                    for node in true_block {
-                        last_value = self.initial_expression(Rc::clone(node));
+                    if condition_value {
+                        for node in true_block {
+                            last_value = self.initial_expression(Rc::clone(node));
+                        }
+                    } else if let Some(false_content) = false_block {
+                        for node in false_content {
+                            last_value = self.initial_expression(Rc::clone(node))
+                        }
                     }
                     return last_value
                 }
