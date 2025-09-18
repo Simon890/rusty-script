@@ -26,7 +26,7 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
-            if self.is_number(&current) {
+            if self.is_number(&current) || (self.is_decimal_point(&current) && self.is_number(&self.next())) {
                 let value = self.number();
                 self.tokens.push(Token::NumberLiteral { value });
                 continue;
@@ -169,6 +169,13 @@ impl<'a> Tokenizer<'a> {
             None => unexpected_eof(&self.pos),
         }
     }
+
+    fn next(&self) -> String {
+        match self.text.chars().nth((self.pos + 1) as usize) {
+            Some(value) => value.to_string(),
+            None => unexpected_eof(&self.pos)
+        }
+    }
     
     fn is_empty_space(&self, value: &str) -> bool {
         TokenRegEx::EmptySpace.test(value)
@@ -185,7 +192,14 @@ impl<'a> Tokenizer<'a> {
 
     fn number(&mut self) -> f32 {
         let mut value = String::new();
-        while !self.is_eof() && self.is_number(&self.current()) {
+        let mut is_there_decimal_point = false;
+        while !self.is_eof() && (self.is_number(&self.current()) || self.is_decimal_point(&self.current())) {
+            if is_there_decimal_point && self.is_decimal_point(&self.current()) {
+                panic!("Invalid format number at position {}", self.pos);
+            }
+            if !is_there_decimal_point {
+                is_there_decimal_point = self.is_decimal_point(&self.current());
+            }
             value.push_str(&self.current());
             self.advance();
         }
@@ -292,6 +306,10 @@ impl<'a> Tokenizer<'a> {
 
     fn is_comma(&self, value: &str) -> bool {
         TokenRegEx::Comma.test(value)
+    }
+
+    fn is_decimal_point(&self, value: &str) -> bool {
+        TokenRegEx::DecimalPoint.test(value)
     }
 
 }

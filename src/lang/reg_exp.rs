@@ -29,6 +29,7 @@ pub enum TokenRegEx {
     LeftCurlyBrace,
     RightCurlyBrace,
     Comma,
+    DecimalPoint,
 }
 
 impl TokenRegEx {
@@ -56,6 +57,7 @@ impl TokenRegEx {
             TokenRegEx::LeftCurlyBrace => check_regex!(r"[\{]", value),
             TokenRegEx::RightCurlyBrace => check_regex!(r"[\}]", value),
             TokenRegEx::Comma => check_regex!(r"[\,]", value),
+            TokenRegEx::DecimalPoint => check_regex!(r"[\.]", value),
         }
     }
 }
@@ -70,9 +72,11 @@ mod test {
         let tab = TokenRegEx::EmptySpace.test("\t");
         let new_line = TokenRegEx::EmptySpace.test("\n");
         let character = TokenRegEx::EmptySpace.test("hello");
+        let decimal_point = TokenRegEx::DecimalPoint.test(".");
         assert_eq!(space, true);
         assert_eq!(tab, true);
         assert_eq!(new_line, true);
         assert_eq!(character, false);
+        assert_eq!(decimal_point, true);
     }
 }
